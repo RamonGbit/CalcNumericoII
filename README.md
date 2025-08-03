@@ -1,3 +1,3 @@
 # CalcNumericoII
 
-Repositorio para la materia de Cálculo Numérico II.
+Repositorio para la materia de Cálculo Numérico.

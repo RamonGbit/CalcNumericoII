@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Proyectos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="flex min-h-screen">
+
+        <div class="bg-red-800 text-white w-64 p-4">
+            <h1 class="text-2xl font-bold mb-8">Gestor de Proyectos</h1>
+            <nav>
+                <ul>
+                    <li class="mb-2"><a href="#" class="block p-2 hover:bg-red-700 rounded bg-red-700">Dashboard</a></li>
+                    <li class="mb-2"><a href="#" class="block p-2 hover:bg-red-700 rounded">Tareas</a></li>
+                    <li class="mb-2"><a href="#" class="block p-2 hover:bg-red-700 rounded">Personal</a></li>
+                    <li class="mb-2"><a href="#" class="block p-2 hover:bg-red-700 rounded">Materiales</a></li>
+                    <li class="mb-2"><a href="#" class="block p-2 hover:bg-red-700 rounded">Otros Costos</a></li>
+                </ul>
+            </nav>
+        </div>
+
+        <div class="flex-1 p-8">
+            
+            <div id="dashboard-section">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold">Dashboard del Proyecto</h2>
+                    <select class="bg-white px-4 py-2 rounded border">
+                        <option>Proyecto 1</option>
+                        <option>Proyecto 2</option>
+                    </select>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                    <div class="card bg-white p-6 rounded-lg shadow h-full">
+                        <h3 class="font-semibold text-gray-700">Avance del Proyecto</h3>
+                        <div class="h-64 mt-4">
+                            <canvas id="avanceChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card bg-white p-6 rounded-lg shadow">
+                        <h3 class="font-semibold text-gray-700">Costo Total vs Costo Real</h3>
+                        <canvas id="costoChart" class="mt-4"></canvas>
+                    </div>
+                    <div class="card bg-white p-6 rounded-lg shadow">
+                        <h3 class="font-semibold text-gray-700">Personal Sobrecargado</h3>
+                        <canvas id="personalChart" class="mt-4"></canvas>
+                    </div>
+                </div>
+                
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold text-xl mb-4">Tareas Recientes</h3>
+                    <div class="space-y-4">
+                        <div class="border-b pb-4">
+                            <div class="flex justify-between mb-2">
+                                <h4 class="font-medium">Diseño de Interfaz</h4>
+                                <span class="text-sm bg-red-100 text-red-800 px-2 py-1 rounded">En progreso</span>
+                            </div>
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div class="bg-red-600 h-2 rounded-full" style="width: 45%"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+           
+            <div id="tareas-section" style="display:none;">
+                <h2 class="text-3xl font-bold mb-6">Tareas</h2>
+                <div class="flex justify-end mb-4">
+                    <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded shadow flex items-center gap-2" disabled>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                        Agregar Tarea
+                    </button>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h3 class="font-semibold text-xl mb-4">Lista de Tareas</h3>
+                    <ul class="divide-y divide-gray-200">
+                        <li class="py-3 flex items-center justify-between">
+                            <span class="font-medium">Diseño de Interfaz</span>
+                            <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">En progreso</span>
+                        </li>
+                        <li class="py-3 flex items-center justify-between">
+                            <span class="font-medium">Base de Datos</span>
+                            <span class="text-xs bg-green-100 text-green-800 px-2 py-1 rounded">Completada</span>
+                        </li>
+                        <li class="py-3 flex items-center justify-between">
+                            <span class="font-medium">Revisión de Requisitos</span>
+                            <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded">Pendiente</span>
+                        </li>
+                        <li class="py-3 flex items-center justify-between">
+                            <span class="font-medium">Pruebas Unitarias</span>
+                            <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded">En progreso</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const tareas = [];
+        const personal = [];
+        const materiales = [];
+        const otrosCostos = [];
+
+    
+        const avanceCtx = document.getElementById('avanceChart').getContext('2d');
+        new Chart(avanceCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Completado', 'Pendiente'],
+                datasets: [{
+                    data: [30, 70],
+                    backgroundColor: ['#DC2626', '#FECACA'], 
+                }]
+            },
+            options: { responsive: true }
+        });
+
+        
+        const dashboardSection = document.getElementById('dashboard-section');
+        const tareasSection = document.getElementById('tareas-section');
+        const sidebarLinks = document.querySelectorAll('nav ul li a');
+
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                sidebarLinks.forEach(l => l.classList.remove('bg-red-700'));
+                this.classList.add('bg-red-700');
+                if (this.textContent.trim() === 'Tareas') {
+                    dashboardSection.style.display = 'none';
+                    tareasSection.style.display = '';
+                } else if (this.textContent.trim() === 'Dashboard') {
+                    dashboardSection.style.display = '';
+                    tareasSection.style.display = 'none';
+                } else {
+                    dashboardSection.style.display = '';
+                    tareasSection.style.display = 'none';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
