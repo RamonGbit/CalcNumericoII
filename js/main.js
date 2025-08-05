@@ -27,6 +27,55 @@ document.addEventListener('DOMContentLoaded', () => {
     setupTareaForm();
     renderDashboard();
 
+    // Presupuesto: alerta si se excede
+    const inputPresupuesto = document.getElementById('inputPresupuesto');
+    let presupuesto = 0;
+    if (inputPresupuesto) {
+        inputPresupuesto.addEventListener('input', function() {
+            presupuesto = parseFloat(this.value) || 0;
+            checkPresupuesto();
+        });
+    }
+
+
+    function getTotalCostoEstimado() {
+        let total = 0;
+        if (Array.isArray(tareas)) {
+            tareas.forEach(t => {
+                total += t.costoEstimado || 0;
+            });
+        }
+        return total;
+    }
+
+    function checkPresupuesto() {
+        let total = getTotalCostoEstimado();
+        if (presupuesto > 0 && total > presupuesto) {
+            alert('¡El costo total estimado de las tareas excede el presupuesto del proyecto!');
+        }
+    }
+
+    // Bloquear registro de tarea si excede presupuesto
+    const tareaForm = document.getElementById('tareaForm');
+    if (tareaForm) {
+        tareaForm.addEventListener('submit', function(e) {
+            const costoInput = document.getElementById('costoEstimadoTarea');
+            let nuevoCosto = parseFloat(costoInput?.value) || 0;
+            let total = getTotalCostoEstimado() + nuevoCosto;
+            if (presupuesto > 0 && total > presupuesto) {
+                alert('Advertencia: El costo total estimado de las tareas ha excedido el presupuesto del proyecto.');
+                // Se permite guardar la tarea
+            }
+        }, true);
+    }
+
+    // Verificar presupuesto cada vez que se actualiza el dashboard
+    const oldRenderDashboard = window.renderDashboard;
+    window.renderDashboard = function() {
+        oldRenderDashboard();
+        checkPresupuesto();
+    };
+
     // SPA: navegación entre secciones
     const dashboardSection = document.getElementById('dashboard-section');
     const tareasSection = document.getElementById('tareas-section');

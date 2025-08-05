@@ -153,7 +153,8 @@ export function renderDashboard() {
                         <span class="font-medium text-lg">${t.nombre}</span>
                         <span class="text-xs px-2 py-1 rounded ml-2 ${t.estado === 'Terminada' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">${t.estado}</span>
                         <div class="text-xs mt-2">Costo estimado: $${t.costoEstimado || 0}</div>
-                        ${t.estado === 'Terminada' && t.horasRealesTarea !== undefined ? `<div class='text-xs mt-2 text-green-700'>Horas reales: ${t.horasRealesTarea} h</div>` : ''}
+                        <div class="text-xs mt-1">Horas estimadas: ${t.tiempoTotal || 0} h</div>
+                        ${t.estado === 'Terminada' && t.horasRealesTarea !== undefined ? `<div class='text-xs mt-1 text-green-700'>Horas reales: ${t.horasRealesTarea} h</div>` : ''}
                     </div>
                     <div class="flex gap-2 items-center">
                         <select class="border rounded px-2 py-1 dashboard-estado-select" data-idx="${idx}">
