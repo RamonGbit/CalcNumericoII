@@ -26,7 +26,46 @@
         <div class="flex-1 p-8">
             <!-- Aquí van las secciones principales -->
             <div id="dashboard-section">
-                <!-- Dashboard content aquí -->
+                <h2 class="text-3xl font-bold mb-6">Dashboard</h2>
+                <div class="bg-white rounded-lg shadow p-6 mb-6">
+                    <h3 class="font-semibold text-xl mb-4">Avance del Proyecto</h3>
+                    <div class="w-full bg-gray-200 rounded-full h-6 mb-2">
+                        <div id="dashboard-bar" class="bg-red-600 h-6 rounded-full transition-all duration-700" style="width:0%"></div>
+                    </div>
+                    <div class="text-right text-lg font-bold" id="dashboard-porcentaje">0%</div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h4 class="font-semibold text-lg mb-2">Costo Total Estimado</h4>
+                        <div id="dashboard-costo-estimado" class="text-2xl font-bold text-red-700">$0</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h4 class="font-semibold text-lg mb-2">Costo Total Real</h4>
+                        <div id="dashboard-costo-real" class="text-2xl font-bold text-green-700">$0</div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h4 class="font-semibold text-lg mb-2">Personal sobreutilizado</h4>
+                        <ul id="dashboard-personal-over" class="list-disc pl-5"></ul>
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h4 class="font-semibold text-lg mb-2">Personal</h4>
+                        <div id="dashboard-costo-personal" class="text-base"></div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h4 class="font-semibold text-lg mb-2">Materiales</h4>
+                        <div id="dashboard-costo-materiales" class="text-base"></div>
+                    </div>
+                    <div class="bg-white rounded-lg shadow p-6">
+                        <h4 class="font-semibold text-lg mb-2">Otros Costos</h4>
+                        <div id="dashboard-costo-otros" class="text-base"></div>
+                    </div>
+                </div>
+                <div class="bg-white rounded-lg shadow p-6 mt-6">
+                    <h3 class="font-semibold text-xl mb-4">Tareas Registradas</h3>
+                    <ul id="dashboard-lista-tareas" class="divide-y divide-gray-200"></ul>
+                </div>
             </div>
             <div id="tareas-section" style="display:none;">
                 <h2 class="text-3xl font-bold mb-6">Tareas</h2>
@@ -50,6 +89,10 @@
                             <option value="Casi listo">Casi listo</option>
                             <option value="Terminada">Terminada</option>
                         </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">Costo estimado de la tarea</label>
+                        <input type="number" id="costoEstimadoTarea" class="w-full px-3 py-2 border rounded" required min="0" placeholder="Ejemplo: 5000">
                     </div>
                     <div class="mb-4">
                         <label class="block text-gray-700 mb-2">Tiempo total (horas)</label>

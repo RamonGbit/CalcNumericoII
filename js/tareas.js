@@ -59,6 +59,7 @@ export function setupTareaForm() {
         const nombre = document.getElementById('nombreTarea').value.trim();
         const estado = document.getElementById('estadoTarea').value;
         const tiempoTotal = parseFloat(document.getElementById('tiempoTotalTarea').value);
+        const costoEstimado = parseFloat(document.getElementById('costoEstimadoTarea').value);
         // Personal seleccionado (solo los marcados)
         const personalSeleccionado = Array.from(document.querySelectorAll('.personal-row')).filter(row => {
             return row.querySelector('.personal-check').checked;
@@ -83,7 +84,23 @@ export function setupTareaForm() {
             const cantidad = parseFloat(row.querySelector('.cantidad-otros').value) || 0;
             return { ...otrosCostos[idx], cantidad };
         });
-        tareas.push({ nombre, estado, tiempoTotal, personal: personalSeleccionado, materiales: materialesSeleccionado, otrosCostos: otrosSeleccionado });
+
+        // Calcular costo real de la tarea
+        let costoReal = 0;
+        personalSeleccionado.forEach(p => {
+            costoReal += (p.costoHora || 0) * (p.tiempo || 0);
+        });
+        materialesSeleccionado.forEach(m => {
+            costoReal += (m.costoUnidad || 0) * (m.cantidad || 0);
+        });
+        otrosSeleccionado.forEach(o => {
+            costoReal += (o.costo || 0) * (o.cantidad || 0);
+        });
+        if (!isNaN(costoEstimado) && costoReal > costoEstimado) {
+            alert('¡El costo real de la tarea supera el costo estimado!');
+            return; // No registrar la tarea
+        }
+        tareas.push({ nombre, estado, tiempoTotal, costoEstimado, personal: personalSeleccionado, materiales: materialesSeleccionado, otrosCostos: otrosSeleccionado });
         renderTareas();
         tareaForm.reset();
         tareaForm.classList.add('hidden');

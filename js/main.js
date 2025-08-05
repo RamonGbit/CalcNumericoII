@@ -25,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupPersonalForm();
     setupGastoForm();
     setupTareaForm();
+    renderDashboard();
 
     // SPA: navegación entre secciones
     const dashboardSection = document.getElementById('dashboard-section');
@@ -46,7 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
             materialesSection.style.display = 'none';
             otrosCostosSection.style.display = 'none';
             if (section === 'Dashboard') {
-                dashboardSection.style.display = '';
+            dashboardSection.style.display = '';
+            renderDashboard();
             } else if (section === 'Tareas') {
                 tareasSection.style.display = '';
                 renderTareas();
@@ -70,3 +72,6 @@ document.addEventListener('DOMContentLoaded', () => {
     materialesSection.style.display = 'none';
     otrosCostosSection.style.display = 'none';
 });
+
+// DASHBOARD LOGIC
+import { renderDashboard } from './dashboard.js';
