@@ -61,7 +61,6 @@ export function renderTareas() {
         });
     });
 }
-
 export function setupTareaForm() {
     const tareaForm = document.getElementById('tareaForm');
     const agregarTareaBtn = document.getElementById('agregarTareaBtn');
@@ -69,7 +68,21 @@ export function setupTareaForm() {
     agregarTareaBtn.addEventListener('click', () => {
         tareaForm.classList.toggle('hidden');
         fillTareaFormOptions();
+        // Bloquear la letra 'e' en los campos de cantidad, horas y costo
+        const tiempoTotalInput = document.getElementById('tiempoTotalTarea');
+        const costoEstimadoInput = document.getElementById('costoEstimadoTarea');
+        [tiempoTotalInput, costoEstimadoInput].forEach(input => {
+            if (input) {
+                input.addEventListener('keydown', function(e) {
+                    if (e.key.toLowerCase() === 'e') e.preventDefault();
+                });
+                input.addEventListener('input', function(e) {
+                    this.value = this.value.replace(/e/gi, '');
+                });
+            }
+        });
     });
+    // El costo estimado se calcula automáticamente y se muestra, no se ingresa
     tareaForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const nombre = document.getElementById('nombreTarea').value.trim();
@@ -161,7 +174,22 @@ export function setupTareaForm() {
                 return;
             }
         }
-        const costoEstimado = parseFloat(document.getElementById('costoEstimadoTarea')?.value) || 0;
+        // Calcular costo estimado automáticamente
+        let costoEstimado = 0;
+        personalSeleccionado.forEach(p => {
+            let costo = (p.costoHora || 0) * p.tiempo;
+            if (p.tiempo > 8) {
+                const horasExtra = p.tiempo - 8;
+                costo += horasExtra * (p.costoHora || 0) * 0.5;
+            }
+            costoEstimado += costo;
+        });
+        materialesSeleccionado.forEach(m => {
+            costoEstimado += (m.costoUnidad || 0) * m.cantidad;
+        });
+        otrosSeleccionado.forEach(o => {
+            costoEstimado += (o.costo || 0) * o.cantidad;
+        });
         tareas.push({ nombre, estado, tiempoTotal, costoEstimado, personal: personalSeleccionado, materiales: materialesSeleccionado, otrosCostos: otrosSeleccionado });
         renderTareas();
         tareaForm.reset();
@@ -177,6 +205,20 @@ export function fillTareaFormOptions() {
         const row = document.createElement('div');
         row.className = 'personal-row flex gap-2 mb-2 items-center';
         row.innerHTML = `<input type='checkbox' class='personal-check' data-idx='${idx}' /><span>${p.nombre} ${p.apellido}</span><input type='number' class='tiempo-personal border rounded px-2 py-1' min='0' placeholder='Horas' />`;
+        // Bloquear la letra 'e' en el input de horas
+        const horasInput = row.querySelector('.tiempo-personal');
+        if (horasInput) {
+            horasInput.addEventListener('keydown', function(e) {
+                if (e.key.toLowerCase() === 'e') e.preventDefault();
+            });
+            horasInput.addEventListener('input', function(e) {
+                this.value = this.value.replace(/e/gi, '');
+            });
+            // Actualizar costo estimado al cambiar horas
+            horasInput.addEventListener('input', actualizarCostoEstimadoTarea);
+        }
+        // Actualizar costo estimado al seleccionar personal
+        row.querySelector('.personal-check').addEventListener('change', actualizarCostoEstimadoTarea);
         personalContainer.appendChild(row);
     });
     // Materiales (checkbox + input cantidad)
@@ -188,7 +230,19 @@ export function fillTareaFormOptions() {
         row.innerHTML = `<input type='checkbox' class='material-check' data-idx='${idx}' /><span>${m.nombre}</span><input type='number' class='cantidad-material border rounded px-2 py-1' min='0' placeholder='Cantidad a usar' style='display:none;' />`;
         row.querySelector('.material-check').addEventListener('change', function() {
             row.querySelector('.cantidad-material').style.display = this.checked ? '' : 'none';
+            actualizarCostoEstimadoTarea();
         });
+        // Bloquear la letra 'e' en el input de cantidad
+        const cantidadInput = row.querySelector('.cantidad-material');
+        if (cantidadInput) {
+            cantidadInput.addEventListener('keydown', function(e) {
+                if (e.key.toLowerCase() === 'e') e.preventDefault();
+            });
+            cantidadInput.addEventListener('input', function(e) {
+                this.value = this.value.replace(/e/gi, '');
+                actualizarCostoEstimadoTarea();
+            });
+        }
         materialesContainer.appendChild(row);
     });
     // Otros Costos (checkbox + input cantidad)
@@ -200,10 +254,78 @@ export function fillTareaFormOptions() {
         row.innerHTML = `<input type='checkbox' class='otros-check' data-idx='${idx}' /><span>${o.nota} ($${o.costo})</span><input type='number' class='cantidad-otros border rounded px-2 py-1' min='0' placeholder='Cantidad' style='display:none;' />`;
         row.querySelector('.otros-check').addEventListener('change', function() {
             row.querySelector('.cantidad-otros').style.display = this.checked ? '' : 'none';
+            actualizarCostoEstimadoTarea();
         });
+        // Bloquear la letra 'e' en el input de cantidad
+        const cantidadInput = row.querySelector('.cantidad-otros');
+        if (cantidadInput) {
+            cantidadInput.addEventListener('keydown', function(e) {
+                if (e.key.toLowerCase() === 'e') e.preventDefault();
+            });
+            cantidadInput.addEventListener('input', function(e) {
+                this.value = this.value.replace(/e/gi, '');
+                actualizarCostoEstimadoTarea();
+            });
+        }
         otrosContainer.appendChild(row);
     });
+    // Actualizar costo estimado al cambiar tiempo total
+    const tiempoTotalInput = document.getElementById('tiempoTotalTarea');
+    if (tiempoTotalInput) {
+        tiempoTotalInput.addEventListener('input', actualizarCostoEstimadoTarea);
+    }
+    // Mostrar el campo de costo estimado como solo lectura
+    const costoEstimadoInput = document.getElementById('costoEstimadoTarea');
+    if (costoEstimadoInput) {
+        costoEstimadoInput.readOnly = true;
+        costoEstimadoInput.style.background = '#f3f4f6';
+    }
+    // Inicializar el valor
+    actualizarCostoEstimadoTarea();
 }
+// Calcula y muestra el costo estimado en el input correspondiente
+function actualizarCostoEstimadoTarea() {
+    let costoEstimado = 0;
+    // Personal
+    document.querySelectorAll('.personal-row').forEach(row => {
+        if (row.querySelector('.personal-check').checked) {
+            const idx = parseInt(row.querySelector('.personal-check').dataset.idx);
+            const tiempo = parseFloat(row.querySelector('.tiempo-personal').value) || 0;
+            const p = personal[idx];
+            let costo = (p.costoHora || 0) * tiempo;
+            if (tiempo > 8) {
+                const horasExtra = tiempo - 8;
+                costo += horasExtra * (p.costoHora || 0) * 0.5;
+            }
+            costoEstimado += costo;
+        }
+    });
+    // Materiales
+    document.querySelectorAll('.material-row').forEach(row => {
+        if (row.querySelector('.material-check').checked) {
+            const idx = parseInt(row.querySelector('.material-check').dataset.idx);
+            const cantidad = parseFloat(row.querySelector('.cantidad-material').value) || 0;
+            const m = materiales[idx];
+            costoEstimado += (m.costoUnidad || 0) * cantidad;
+        }
+    });
+    // Otros Costos
+    document.querySelectorAll('.otros-row').forEach(row => {
+        if (row.querySelector('.otros-check').checked) {
+            const idx = parseInt(row.querySelector('.otros-check').dataset.idx);
+            const cantidad = parseFloat(row.querySelector('.cantidad-otros').value) || 0;
+            const o = otrosCostos[idx];
+            costoEstimado += (o.costo || 0) * cantidad;
+        }
+    });
+    // Mostrar en el input
+    const costoEstimadoInput = document.getElementById('costoEstimadoTarea');
+    if (costoEstimadoInput) {
+        costoEstimadoInput.value = costoEstimado.toFixed(2);
+    }
+}
+
+
 // Modal de edición de tarea
 function mostrarModalEditarTarea(idx) {
     const tarea = tareas[idx];
@@ -332,4 +454,3 @@ function mostrarModalEditarTarea(idx) {
         });
     };
 }
-     

@@ -45,6 +45,19 @@ export function setupMaterialForm() {
     agregarMaterialBtn.addEventListener('click', () => {
         materialForm.classList.toggle('hidden');
     });
+    // Bloquear la letra 'e' en los campos de cantidad y costo
+    const reservaInput = document.getElementById('reservaMaterial');
+    const costoUnidadInput = document.getElementById('costoUnidadMaterial');
+    [reservaInput, costoUnidadInput].forEach(input => {
+        if (input) {
+            input.addEventListener('keydown', function(e) {
+                if (e.key.toLowerCase() === 'e') e.preventDefault();
+            });
+            input.addEventListener('input', function(e) {
+                this.value = this.value.replace(/e/gi, '');
+            });
+        }
+    });
     materialForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const nombre = document.getElementById('nombreMaterial').value.trim();

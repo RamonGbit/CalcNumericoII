@@ -41,19 +41,19 @@ export function setupGastoForm() {
     agregarGastoBtn.addEventListener('click', () => {
         gastoForm.classList.toggle('hidden');
     });
-    // Solo permitir números y punto en el campo de costo
+    // Bloquear la letra 'e' en los campos de cantidad y costo
     const costoInput = document.getElementById('costoGasto');
-    if (costoInput) {
-        costoInput.addEventListener('input', function(e) {
-            // Reemplaza cualquier caracter que no sea dígito o punto
-            this.value = this.value.replace(/[^\d.]/g, '');
-            // Solo un punto decimal permitido
-            const parts = this.value.split('.');
-            if (parts.length > 2) {
-                this.value = parts[0] + '.' + parts.slice(1).join('');
-            }
-        });
-    }
+    const cantidadInput = document.getElementById('cantidadDisponibleGasto');
+    [costoInput, cantidadInput].forEach(input => {
+        if (input) {
+            input.addEventListener('keydown', function(e) {
+                if (e.key.toLowerCase() === 'e') e.preventDefault();
+            });
+            input.addEventListener('input', function(e) {
+                this.value = this.value.replace(/e/gi, '');
+            });
+        }
+    });
     gastoForm.addEventListener('submit', function(e) {
         e.preventDefault();
     const nota = document.getElementById('notaGasto').value.trim();

@@ -44,10 +44,12 @@ export function renderDashboard() {
             let costoEst = (p.costoHora || 0) * horasEst;
             let sobreutilizado = false;
             // Recargo por sobreutilización en estimado
-            if (horasEst > 8) {
-                const horasExtra = horasEst - 8;
-                costoEst += horasExtra * (p.costoHora || 0) * 0.5;
-                sobreutilizado = true;
+            if (t.estado !== 'Terminada') {
+                if (horasEst > 8) {
+                    const horasExtra = horasEst - 8;
+                    costoEst += horasExtra * (p.costoHora || 0) * 0.5;
+                    sobreutilizado = true;
+                }
             }
             costoPersonalEst += costoEst;
             // Real: el valor que el usuario coloca al terminar la tarea (guardado en t.personal[i].tiempo)
@@ -58,6 +60,8 @@ export function renderDashboard() {
                     const horasExtra = horasReal - 8;
                     costoReal += horasExtra * (p.costoHora || 0) * 0.5;
                     sobreutilizado = true;
+                } else {
+                    sobreutilizado = false;
                 }
                 costoPersonalReal += costoReal;
             }
@@ -212,15 +216,23 @@ function mostrarModalRealTarea(idx) {
             alert('Las horas reales totales deben ser un entero positivo mayor a 0.');
             return;
         }
-        tarea.horasRealesTarea = horasRealesTarea;
-        // Guardar horas reales por empleado
+        // Validar suma de horas por empleado
+        let sumaHorasPersonal = 0;
         for (let i = 0; i < tarea.personal.length; i++) {
             const val = parseInt(form[`personal-${i}`].value);
             if (isNaN(val) || val <= 0) {
                 alert('Las horas reales por empleado deben ser enteros positivos mayores a 0.');
                 return;
             }
-            // Se permite registrar más horas reales que las previstas
+            sumaHorasPersonal += val;
+        }
+        if (sumaHorasPersonal > horasRealesTarea) {
+            alert('La suma de horas por empleado no puede ser mayor que las horas reales totales de la tarea.');
+            return;
+        }
+        tarea.horasRealesTarea = horasRealesTarea;
+        for (let i = 0; i < tarea.personal.length; i++) {
+            const val = parseInt(form[`personal-${i}`].value);
             tarea.personal[i].tiempo = val;
         }
         // Guardar materiales reales

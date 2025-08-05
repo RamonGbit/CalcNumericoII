@@ -60,6 +60,16 @@ export function setupPersonalForm() {
     agregarPersonalBtn.addEventListener('click', () => {
         personalForm.classList.toggle('hidden');
     });
+    // Bloquear la letra 'e' en el campo de costo hora
+    const costoHoraInput = document.getElementById('costoHoraPersonal');
+    if (costoHoraInput) {
+        costoHoraInput.addEventListener('keydown', function(e) {
+            if (e.key.toLowerCase() === 'e') e.preventDefault();
+        });
+        costoHoraInput.addEventListener('input', function(e) {
+            this.value = this.value.replace(/e/gi, '');
+        });
+    }
     personalForm.addEventListener('submit', function(e) {
         e.preventDefault();
         const nombre = document.getElementById('nombrePersonal').value.trim();
