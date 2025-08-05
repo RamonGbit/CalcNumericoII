@@ -165,6 +165,16 @@ window.editTarea = function(idx) {
     alert('Funcionalidad de edición en desarrollo');
 };
 window.updateEstadoTarea = function(idx, estado) {
-    tareas[idx].estado = estado;
-    renderTareas();
+    if (estado === 'Terminada') {
+        // Mostrar modal desde dashboard.js
+        if (window.mostrarModalRealTarea) {
+            window.mostrarModalRealTarea(idx);
+        } else {
+            tareas[idx].estado = estado;
+            renderTareas();
+        }
+    } else {
+        tareas[idx].estado = estado;
+        renderTareas();
+    }
 };

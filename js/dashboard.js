@@ -1,13 +1,28 @@
+// Exponer la función para otros módulos
+// ...existing code...
+// Exponer la función para otros módulos (al final del archivo)
+if (typeof mostrarModalRealTarea === 'function') {
+    window.mostrarModalRealTarea = mostrarModalRealTarea;
+}
 // dashboard.js
 // Lógica para el dashboard
 
 import { tareas, estadosTarea, renderTareas } from './tareas.js';
 
 export function renderDashboard() {
-    // Avance
-    const total = tareas.length;
-    const terminadas = tareas.filter(t => t.estado === 'Terminada').length;
-    const porcentaje = total === 0 ? 0 : Math.round((terminadas / total) * 100);
+    // Avance por estado
+    const estadoPorcentaje = {
+        'Sin hacer': 0,
+        'Empezado': 25,
+        'Por la mitad': 50,
+        'Casi listo': 75,
+        'Terminada': 100
+    };
+    let suma = 0;
+    tareas.forEach(t => {
+        suma += estadoPorcentaje[t.estado] || 0;
+    });
+    const porcentaje = tareas.length === 0 ? 0 : Math.round(suma / tareas.length);
     const bar = document.getElementById('dashboard-bar');
     const porcText = document.getElementById('dashboard-porcentaje');
     if (bar) bar.style.width = porcentaje + '%';
@@ -112,10 +127,67 @@ export function renderDashboard() {
             listaDashboard.querySelectorAll('.dashboard-estado-select').forEach(select => {
                 select.addEventListener('change', function() {
                     const idx = parseInt(this.dataset.idx);
-                    tareas[idx].estado = this.value;
-                    renderTareas();
-                    renderDashboard();
+                    if (this.value === 'Terminada') {
+                        mostrarModalRealTarea(idx);
+                    } else {
+                        tareas[idx].estado = this.value;
+                        renderTareas();
+                        renderDashboard();
+                    }
                 });
+// Modal para datos reales de tarea
+function mostrarModalRealTarea(idx) {
+    const tarea = tareas[idx];
+    const modal = document.getElementById('modal-real-tarea');
+    const form = document.getElementById('form-real-tarea');
+    const personalDiv = document.getElementById('modal-real-personal');
+    const materialesDiv = document.getElementById('modal-real-materiales');
+    const otrosDiv = document.getElementById('modal-real-otros');
+    // Horas reales totales de la tarea
+    personalDiv.innerHTML = `<h4 class='font-bold mb-2'>Horas reales totales de la tarea</h4><input type='number' min='0' step='0.1' class='border rounded px-2 py-1 mb-4' name='horasRealesTarea' value='${tarea.horasRealesTarea || tarea.tiempoTotal || 0}'>`;
+    personalDiv.innerHTML += '<h4 class="font-bold mb-2">Horas reales por empleado</h4>';
+    tarea.personal.forEach((p, i) => {
+        personalDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${p.nombre} ${p.apellido}:</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='personal-${i}' value='${p.tiempo || 0}'></div>`;
+    });
+    // Renderizar inputs para materiales
+    materialesDiv.innerHTML = '<h4 class="font-bold mb-2">Cantidad real de materiales</h4>';
+    tarea.materiales.forEach((m, i) => {
+        materialesDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${m.nombre}:</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='material-${i}' value='${m.cantidad || 0}'></div>`;
+    });
+    // Renderizar inputs para otros costos
+    otrosDiv.innerHTML = '<h4 class="font-bold mb-2">Cantidad real de otros costos</h4>';
+    tarea.otrosCostos.forEach((o, i) => {
+        otrosDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${o.nota}:</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='otros-${i}' value='${o.cantidad || 0}'></div>`;
+    });
+    modal.classList.remove('hidden');
+
+    // Cancelar
+    document.getElementById('cancelarRealTarea').onclick = () => {
+        modal.classList.add('hidden');
+    };
+    // Guardar datos reales
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        // Guardar horas reales totales
+        tarea.horasRealesTarea = parseFloat(form['horasRealesTarea'].value) || 0;
+        // Guardar horas reales por empleado
+        tarea.personal.forEach((p, i) => {
+            p.tiempo = parseFloat(form[`personal-${i}`].value) || 0;
+        });
+        // Guardar materiales reales
+        tarea.materiales.forEach((m, i) => {
+            m.cantidad = parseFloat(form[`material-${i}`].value) || 0;
+        });
+        // Guardar otros costos reales
+        tarea.otrosCostos.forEach((o, i) => {
+            o.cantidad = parseFloat(form[`otros-${i}`].value) || 0;
+        });
+        tarea.estado = 'Terminada';
+        modal.classList.add('hidden');
+        renderTareas();
+        renderDashboard();
+    };
+}
             });
         }
     }

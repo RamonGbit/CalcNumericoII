@@ -26,6 +26,21 @@
         <div class="flex-1 p-8">
             <!-- Aquí van las secciones principales -->
             <div id="dashboard-section">
+                <!-- Modal para datos reales de tarea -->
+                <div id="modal-real-tarea" class="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50 hidden">
+                    <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-xl">
+                        <h3 class="text-2xl font-bold mb-4">Registrar datos reales de la tarea</h3>
+                        <form id="form-real-tarea">
+                            <div id="modal-real-personal" class="mb-4"></div>
+                            <div id="modal-real-materiales" class="mb-4"></div>
+                            <div id="modal-real-otros" class="mb-4"></div>
+                            <div class="flex justify-end gap-2">
+                                <button type="button" id="cancelarRealTarea" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Cancelar</button>
+                                <button type="submit" class="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700">Guardar</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
                 <h2 class="text-3xl font-bold mb-6">Dashboard</h2>
                 <div class="bg-white rounded-lg shadow p-6 mb-6">
                     <h3 class="font-semibold text-xl mb-4">Avance del Proyecto</h3>
