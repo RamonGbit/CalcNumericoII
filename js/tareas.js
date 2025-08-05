@@ -33,11 +33,11 @@ export function renderTareas() {
                 <div class="text-xs mt-2">Tiempo total: ${t.tiempoTotal} horas</div>
                 <div class="text-xs mt-2">Personal: ${t.personal.map(p => `${p.nombre} ${p.apellido} (${p.tiempo}h)`).join(', ')}</div>
                 <div class="text-xs mt-2">Materiales: ${t.materiales.map(m => `${m.nombre} (${m.cantidad})`).join(', ')}</div>
-                <div class="text-xs mt-2">Otros Costos: ${t.otrosCostos.map(o => `${o.nota} ($${o.costo}) x${o.cantidad}`).join(', ')}</div>
+                <div class="text-xs mt-2">Otros Costos: ${t.otrosCostos.map(o => `${o.nota} (${o.unidad || ''}, $${o.costo}) x${o.cantidad}`).join(', ')}</div>
             </div>
             <div class="flex gap-2">
                 <button class="bg-red-500 text-white px-2 py-1 rounded eliminar-tarea-btn" data-idx="${idx}">Eliminar</button>
-                <button class="bg-blue-500 text-white px-2 py-1 rounded edit-tarea-btn" data-idx="${idx}">Editar</button>
+                ${t.estado === 'Terminada' ? `<span class="px-2 py-1 rounded bg-gray-300 text-gray-700 cursor-not-allowed">Tarea terminada</span>` : `<button class="bg-blue-500 text-white px-2 py-1 rounded edit-tarea-btn" data-idx="${idx}">Editar</button>`}
                 <!-- El estado solo se puede modificar desde el dashboard -->
             </div>
         `;
@@ -91,7 +91,7 @@ export function setupTareaForm() {
         }).map(row => {
             const idx = parseInt(row.querySelector('.personal-check').dataset.idx);
             const tiempo = parseFloat(row.querySelector('.tiempo-personal').value) || 0;
-            return { ...personal[idx], tiempo };
+            return { ...personal[idx], tiempo, tiempoEstimado: tiempo };
         });
         if (personalSeleccionado.length === 0) {
             alert('Debes seleccionar al menos una persona para la tarea.');
@@ -101,8 +101,15 @@ export function setupTareaForm() {
             alert('No puedes asignar personal con 0 horas de trabajo a la tarea.');
             return;
         }
+        if (personalSeleccionado.some(p => p.tiempo > tiempoTotal)) {
+            alert('Las horas asignadas a una persona no pueden ser mayores al tiempo total de la tarea.');
+            return;
+        }
         if (personalSeleccionado.some(p => p.tiempo > 8)) {
-            alert('No puedes asignar más de 8 horas a una persona en una sola tarea.');
+            alert('Advertencia: Si asignas más de 8 horas a una persona en una sola tarea, a partir de la novena hora se aplicará un recargo del 50% en el costo por hora.');
+        }
+        if (personalSeleccionado.some(p => p.tiempo > tiempoTotal)) {
+            alert('Las horas asignadas a una persona no pueden ser mayores al tiempo total de la tarea.');
             return;
         }
         // Materiales seleccionado (solo los marcados)
@@ -111,21 +118,51 @@ export function setupTareaForm() {
         }).map(row => {
             const idx = parseInt(row.querySelector('.material-check').dataset.idx);
             const cantidad = parseFloat(row.querySelector('.cantidad-material').value) || 0;
-            return { ...materiales[idx], cantidad };
+            return { ...materiales[idx], cantidad, cantidadEstimado: cantidad };
         });
         if (materialesSeleccionado.some(m => m.cantidad <= 0)) {
             alert('No puedes asignar materiales con 0 unidades a la tarea.');
             return;
         }
+        // Validar y actualizar reserva de materiales
+        for (let m of materialesSeleccionado) {
+            const mat = materiales.find(mat => mat.nombre === m.nombre);
+            if (mat && m.cantidad > mat.reserva) {
+                alert(`No puedes asignar más unidades de ${m.nombre} (${m.cantidad}) que las que hay en reserva (${mat.reserva}).`);
+                return;
+            }
+        }
+        // Disminuir la reserva de materiales usados
+        materialesSeleccionado.forEach(m => {
+            const mat = materiales.find(mat => mat.nombre === m.nombre);
+            if (mat) mat.reserva -= m.cantidad;
+        });
         // Otros costos seleccionado (solo los marcados, con cantidad)
         const otrosSeleccionado = Array.from(document.querySelectorAll('.otros-row')).filter(row => {
             return row.querySelector('.otros-check').checked;
         }).map(row => {
             const idx = parseInt(row.querySelector('.otros-check').dataset.idx);
             const cantidad = parseFloat(row.querySelector('.cantidad-otros').value) || 0;
-            return { ...otrosCostos[idx], cantidad };
+            return { ...otrosCostos[idx], cantidad, cantidadEstimado: cantidad };
         });
-        tareas.push({ nombre, estado, tiempoTotal, personal: personalSeleccionado, materiales: materialesSeleccionado, otrosCostos: otrosSeleccionado });
+        // Validar que no se exceda la cantidad de otros costos
+        for (let o of otrosSeleccionado) {
+            if (o.cantidad <= 0) {
+                alert(`No puedes asignar ${o.nota} con 0 unidades a la tarea.`);
+                return;
+            }
+            // Sumar el total usado en todas las tareas para ese gasto
+            const totalUsado = tareas.reduce((acc, t) => {
+                const usado = t.otrosCostos.find(oc => oc.nota === o.nota);
+                return acc + (usado ? usado.cantidad : 0);
+            }, 0);
+            if (o.cantidad + totalUsado > o.cantidadDisponible) {
+                alert(`No puedes asignar ${o.nota} con ${o.cantidad} unidades. Solo hay ${o.cantidadDisponible - totalUsado} disponibles.`);
+                return;
+            }
+        }
+        const costoEstimado = parseFloat(document.getElementById('costoEstimadoTarea')?.value) || 0;
+        tareas.push({ nombre, estado, tiempoTotal, costoEstimado, personal: personalSeleccionado, materiales: materialesSeleccionado, otrosCostos: otrosSeleccionado });
         renderTareas();
         tareaForm.reset();
         tareaForm.classList.add('hidden');
@@ -233,7 +270,7 @@ function mostrarModalEditarTarea(idx) {
     import('./personal.js').then(({ personal }) => {
         personal.forEach((p, i) => {
             const asignado = tarea.personal.find(tp => tp.nombre === p.nombre && tp.apellido === p.apellido);
-            personalDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='personal-${i}' ${asignado ? 'checked' : ''} /><span>${p.nombre} ${p.apellido}</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='personal-horas-${i}' value='${asignado ? asignado.tiempo : ''}' /></div>`;
+            personalDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='personal-${i}' ${asignado ? 'checked' : ''} /><span>${p.nombre} ${p.apellido}</span><input type='number' min='1' step='1' class='border rounded px-2 py-1' name='personal-horas-${i}' value='${asignado ? asignado.tiempo : 1}' /></div>`;
         });
     });
     // Materiales
@@ -242,7 +279,7 @@ function mostrarModalEditarTarea(idx) {
     import('./materiales.js').then(({ materiales }) => {
         materiales.forEach((m, i) => {
             const asignado = tarea.materiales.find(tm => tm.nombre === m.nombre);
-            materialesDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='material-${i}' ${asignado ? 'checked' : ''} /><span>${m.nombre}</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='material-cantidad-${i}' value='${asignado ? asignado.cantidad : ''}' /></div>`;
+            materialesDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='material-${i}' ${asignado ? 'checked' : ''} /><span>${m.nombre}</span><input type='number' min='1' step='1' class='border rounded px-2 py-1' name='material-cantidad-${i}' value='${asignado ? asignado.cantidad : 1}' /></div>`;
         });
     });
     // Otros Costos
@@ -251,7 +288,7 @@ function mostrarModalEditarTarea(idx) {
     import('./otroscostos.js').then(({ otrosCostos }) => {
         otrosCostos.forEach((o, i) => {
             const asignado = tarea.otrosCostos.find(to => to.nota === o.nota);
-            otrosDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='otros-${i}' ${asignado ? 'checked' : ''} /><span>${o.nota}</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='otros-cantidad-${i}' value='${asignado ? asignado.cantidad : ''}' /></div>`;
+            otrosDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='otros-${i}' ${asignado ? 'checked' : ''} /><span>${o.nota} (${o.unidad || ''}, $${o.costo})</span><input type='number' min='1' step='1' class='border rounded px-2 py-1' name='otros-cantidad-${i}' value='${asignado ? asignado.cantidad : 1}' /></div>`;
         });
     });
     // Cancelar
@@ -270,7 +307,21 @@ function mostrarModalEditarTarea(idx) {
             tarea.personal = personal.filter((p, i) => form[`personal-${i}`].checked).map((p, i) => ({ ...p, tiempo: parseFloat(form[`personal-horas-${i}`].value) || 0 }));
             // Materiales
             import('./materiales.js').then(({ materiales }) => {
-                tarea.materiales = materiales.filter((m, i) => form[`material-${i}`].checked).map((m, i) => ({ ...m, cantidad: parseFloat(form[`material-cantidad-${i}`].value) || 0 }));
+                const nuevosMateriales = materiales.filter((m, i) => form[`material-${i}`].checked).map((m, i) => ({ ...m, cantidad: parseFloat(form[`material-cantidad-${i}`].value) || 0 }));
+                // Validar reserva al editar
+                for (let m of nuevosMateriales) {
+                    const mat = materiales.find(mat => mat.nombre === m.nombre);
+                    if (mat && m.cantidad > mat.reserva) {
+                        alert(`No puedes asignar más unidades de ${m.nombre} (${m.cantidad}) que las que hay en reserva (${mat.reserva}).`);
+                        return;
+                    }
+                }
+                // Disminuir la reserva de materiales usados
+                nuevosMateriales.forEach(m => {
+                    const mat = materiales.find(mat => mat.nombre === m.nombre);
+                    if (mat) mat.reserva -= m.cantidad;
+                });
+                tarea.materiales = nuevosMateriales;
                 // Otros Costos
                 import('./otroscostos.js').then(({ otrosCostos }) => {
                     tarea.otrosCostos = otrosCostos.filter((o, i) => form[`otros-${i}`].checked).map((o, i) => ({ ...o, cantidad: parseFloat(form[`otros-cantidad-${i}`].value) || 0 }));

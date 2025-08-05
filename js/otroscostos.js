@@ -16,7 +16,8 @@ export function renderGastos() {
         li.className = 'py-3 flex flex-col md:flex-row md:items-center md:justify-between';
         li.innerHTML = `
             <span class="font-medium">${g.nota}</span>
-            <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded mt-2 md:mt-0 md:ml-2">$${g.costo}</span>
+            <span class="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded mt-2 md:mt-0 md:ml-2">Cantidad: ${g.cantidadDisponible}</span>
+            <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded mt-2 md:mt-0 md:ml-2">Costo por unidad: $${g.costo}</span>
             <button class="bg-red-500 text-white px-2 py-1 rounded eliminar-gasto-btn" data-idx="${idx}">Eliminar</button>
         `;
         listaGastos.appendChild(li);
@@ -55,25 +56,30 @@ export function setupGastoForm() {
     }
     gastoForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        const nota = document.getElementById('notaGasto').value.trim();
-        const costo = parseFloat(document.getElementById('costoGasto').value);
-        if (!nota || isNaN(costo)) return;
-        if (nota.length < 3 || nota.length > 100) {
-            alert('La nota debe tener entre 3 y 100 caracteres.');
-            return;
-        }
-        // Validar duplicados (case-insensitive)
-        if (otrosCostos.some(g => g.nota.toLowerCase() === nota.toLowerCase())) {
-            alert('Ya existe un gasto con esa nota.');
-            return;
-        }
-        if (costo <= 0) {
-            alert('El costo del gasto debe ser mayor a 0.');
-            return;
-        }
-        otrosCostos.push({ nota, costo });
-        renderGastos();
-        gastoForm.reset();
-        gastoForm.classList.add('hidden');
+    const nota = document.getElementById('notaGasto').value.trim();
+    const costo = parseFloat(document.getElementById('costoGasto').value);
+    const cantidadDisponible = parseFloat(document.getElementById('cantidadDisponibleGasto').value);
+    if (!nota || isNaN(costo) || isNaN(cantidadDisponible)) return;
+    if (nota.length < 3 || nota.length > 100) {
+        alert('La nota debe tener entre 3 y 100 caracteres.');
+        return;
+    }
+    if (cantidadDisponible <= 0) {
+        alert('La cantidad disponible debe ser mayor a 0.');
+        return;
+    }
+    // Validar duplicados (case-insensitive)
+    if (otrosCostos.some(g => g.nota.toLowerCase() === nota.toLowerCase())) {
+        alert('Ya existe un gasto con esa nota.');
+        return;
+    }
+    if (costo <= 0) {
+        alert('El costo del gasto debe ser mayor a 0.');
+        return;
+    }
+    otrosCostos.push({ nota, costo, cantidadDisponible });
+    renderGastos();
+    gastoForm.reset();
+    gastoForm.classList.add('hidden');
     });
 }

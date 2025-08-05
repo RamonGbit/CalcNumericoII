@@ -32,36 +32,72 @@ export function renderDashboard() {
     let costoPersonalEst = 0, costoPersonalReal = 0;
     let costoMaterialesEst = 0, costoMaterialesReal = 0;
     let costoOtrosEst = 0, costoOtrosReal = 0;
-    let personalHoras = {};
+    let personalSobreutilizado = [];
     let costoTotalEstimado = 0;
     let costoTotalReal = 0;
     tareas.forEach(t => {
         costoTotalEstimado += t.costoEstimado || 0;
         // Personal
-        t.personal.forEach(p => {
-            const horas = p.tiempo || 0;
-            const costo = (p.costoHora || 0) * horas;
-            costoPersonalEst += costo;
-            if (t.estado === 'Terminada') costoPersonalReal += costo;
-            // Sumar horas por persona para sobreutilización
-            const key = `${p.nombre} ${p.apellido}`;
-            personalHoras[key] = (personalHoras[key] || 0) + horas;
+        t.personal.forEach((p, i) => {
+            // Estimado: el valor que se colocó al registrar la tarea (guardado en t.personal[i].tiempoEstimado)
+            const horasEst = p.tiempoEstimado !== undefined ? p.tiempoEstimado : p.tiempo;
+            let costoEst = (p.costoHora || 0) * horasEst;
+            let sobreutilizado = false;
+            // Recargo por sobreutilización en estimado
+            if (horasEst > 8) {
+                const horasExtra = horasEst - 8;
+                costoEst += horasExtra * (p.costoHora || 0) * 0.5;
+                sobreutilizado = true;
+            }
+            costoPersonalEst += costoEst;
+            // Real: el valor que el usuario coloca al terminar la tarea (guardado en t.personal[i].tiempo)
+            if (t.estado === 'Terminada') {
+                const horasReal = p.tiempo || 0;
+                let costoReal = (p.costoHora || 0) * horasReal;
+                if (horasReal > 8) {
+                    const horasExtra = horasReal - 8;
+                    costoReal += horasExtra * (p.costoHora || 0) * 0.5;
+                    sobreutilizado = true;
+                }
+                costoPersonalReal += costoReal;
+            }
+            // Solo agregar una vez por persona/tarea si sobreutilizado
+            if (sobreutilizado) {
+                // Verificar si ya existe para esta persona y tarea
+                if (!personalSobreutilizado.some(psu => psu.nombre === `${p.nombre} ${p.apellido}` && psu.tarea === t.nombre)) {
+                    // Mostrar las horas reales si la tarea está terminada, si no las estimadas
+                    const horasMostrar = t.estado === 'Terminada' ? (p.tiempo || horasEst) : horasEst;
+                    personalSobreutilizado.push({ nombre: `${p.nombre} ${p.apellido}`, horas: horasMostrar, tarea: t.nombre });
+                }
+            }
         });
         // Materiales
-        t.materiales.forEach(m => {
-            const cantidad = m.cantidad || 0;
-            const costo = (m.costoUnidad || 0) * cantidad;
-            costoMaterialesEst += costo;
-            if (t.estado === 'Terminada') costoMaterialesReal += costo;
+        t.materiales.forEach((m, i) => {
+            // Estimado: cantidad que se colocó al registrar la tarea (guardado en t.materiales[i].cantidadEstimado)
+            const cantidadEst = m.cantidadEstimado !== undefined ? m.cantidadEstimado : m.cantidad;
+            const costoEst = (m.costoUnidad || 0) * cantidadEst;
+            costoMaterialesEst += costoEst;
+            // Real: cantidad que el usuario coloca al terminar la tarea (guardado en t.materiales[i].cantidad)
+            if (t.estado === 'Terminada') {
+                const cantidadReal = m.cantidad || 0;
+                const costoReal = (m.costoUnidad || 0) * cantidadReal;
+                costoMaterialesReal += costoReal;
+            }
         });
         // Otros Costos
-        t.otrosCostos.forEach(o => {
-            const cantidad = o.cantidad || 0;
-            const costo = (o.costo || 0) * cantidad;
-            costoOtrosEst += costo;
-            if (t.estado === 'Terminada') costoOtrosReal += costo;
+        t.otrosCostos.forEach((o, i) => {
+            // Estimado: cantidad que se colocó al registrar la tarea (guardado en t.otrosCostos[i].cantidadEstimado)
+            const cantidadEst = o.cantidadEstimado !== undefined ? o.cantidadEstimado : o.cantidad;
+            const costoEst = (o.costo || 0) * cantidadEst;
+            costoOtrosEst += costoEst;
+            // Real: cantidad que el usuario coloca al terminar la tarea (guardado en t.otrosCostos[i].cantidad)
+            if (t.estado === 'Terminada') {
+                const cantidadReal = o.cantidad || 0;
+                const costoReal = (o.costo || 0) * cantidadReal;
+                costoOtrosReal += costoReal;
+            }
         });
-        // Real
+        // Real total
         if (t.estado === 'Terminada') {
             let real = 0;
             t.personal.forEach(p => { real += (p.costoHora || 0) * (p.tiempo || 0); });
@@ -79,16 +115,15 @@ export function renderDashboard() {
     const personalOver = document.getElementById('dashboard-personal-over');
     if (personalOver) {
         personalOver.innerHTML = '';
-        Object.entries(personalHoras).forEach(([nombre, horas]) => {
-            if (horas > 8) {
+        if (personalSobreutilizado.length === 0) {
+            personalOver.innerHTML = '<span class="text-green-600">Ninguno</span>';
+        } else {
+            personalSobreutilizado.forEach(p => {
                 const li = document.createElement('li');
-                li.textContent = `${nombre}: ${horas}h`;
+                li.textContent = `${p.nombre}: ${p.horas}h en tarea "${p.tarea}"`;
                 li.className = 'text-red-600 font-bold animate-pulse transition-transform duration-500';
                 personalOver.appendChild(li);
-            }
-        });
-        if (personalOver.innerHTML === '') {
-            personalOver.innerHTML = '<span class="text-green-600">Ninguno</span>';
+            });
         }
     }
     // Costos por tipo
@@ -147,20 +182,20 @@ function mostrarModalRealTarea(idx) {
     const materialesDiv = document.getElementById('modal-real-materiales');
     const otrosDiv = document.getElementById('modal-real-otros');
     // Horas reales totales de la tarea
-    personalDiv.innerHTML = `<h4 class='font-bold mb-2'>Horas reales totales de la tarea</h4><input type='number' min='0' step='0.1' class='border rounded px-2 py-1 mb-4' name='horasRealesTarea' value='${tarea.horasRealesTarea || tarea.tiempoTotal || 0}'>`;
+    personalDiv.innerHTML = `<h4 class='font-bold mb-2'>Horas reales totales de la tarea</h4><input type='number' min='1' step='1' class='border rounded px-2 py-1 mb-4' name='horasRealesTarea' value='${tarea.horasRealesTarea || tarea.tiempoTotal || 1}'>`;
     personalDiv.innerHTML += '<h4 class="font-bold mb-2">Horas reales por empleado</h4>';
     tarea.personal.forEach((p, i) => {
-        personalDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${p.nombre} ${p.apellido}:</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='personal-${i}' value='${p.tiempo || 0}'></div>`;
+        personalDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${p.nombre} ${p.apellido}:</span><input type='number' min='1' step='1' class='border rounded px-2 py-1' name='personal-${i}' value='${p.tiempo || 1}'></div>`;
     });
     // Renderizar inputs para materiales
     materialesDiv.innerHTML = '<h4 class="font-bold mb-2">Cantidad real de materiales</h4>';
     tarea.materiales.forEach((m, i) => {
-        materialesDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${m.nombre}:</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='material-${i}' value='${m.cantidad || 0}'></div>`;
+        materialesDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${m.nombre}:</span><input type='number' min='1' step='1' class='border rounded px-2 py-1' name='material-${i}' value='${m.cantidad || 1}'></div>`;
     });
     // Renderizar inputs para otros costos
     otrosDiv.innerHTML = '<h4 class="font-bold mb-2">Cantidad real de otros costos</h4>';
     tarea.otrosCostos.forEach((o, i) => {
-        otrosDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${o.nota}:</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='otros-${i}' value='${o.cantidad || 0}'></div>`;
+        otrosDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><span>${o.nota}:</span><input type='number' min='1' step='1' class='border rounded px-2 py-1' name='otros-${i}' value='${o.cantidad || 1}'></div>`;
     });
     modal.classList.remove('hidden');
 
@@ -171,20 +206,41 @@ function mostrarModalRealTarea(idx) {
     // Guardar datos reales
     form.onsubmit = function(e) {
         e.preventDefault();
-        // Guardar horas reales totales
-        tarea.horasRealesTarea = parseFloat(form['horasRealesTarea'].value) || 0;
+        // Validar y guardar horas reales totales
+        const horasRealesTarea = parseInt(form['horasRealesTarea'].value);
+        if (isNaN(horasRealesTarea) || horasRealesTarea <= 0) {
+            alert('Las horas reales totales deben ser un entero positivo mayor a 0.');
+            return;
+        }
+        tarea.horasRealesTarea = horasRealesTarea;
         // Guardar horas reales por empleado
-        tarea.personal.forEach((p, i) => {
-            p.tiempo = parseFloat(form[`personal-${i}`].value) || 0;
-        });
+        for (let i = 0; i < tarea.personal.length; i++) {
+            const val = parseInt(form[`personal-${i}`].value);
+            if (isNaN(val) || val <= 0) {
+                alert('Las horas reales por empleado deben ser enteros positivos mayores a 0.');
+                return;
+            }
+            // Se permite registrar más horas reales que las previstas
+            tarea.personal[i].tiempo = val;
+        }
         // Guardar materiales reales
-        tarea.materiales.forEach((m, i) => {
-            m.cantidad = parseFloat(form[`material-${i}`].value) || 0;
-        });
+        for (let i = 0; i < tarea.materiales.length; i++) {
+            const val = parseInt(form[`material-${i}`].value);
+            if (isNaN(val) || val <= 0) {
+                alert('La cantidad real de materiales debe ser un entero positivo mayor a 0.');
+                return;
+            }
+            tarea.materiales[i].cantidad = val;
+        }
         // Guardar otros costos reales
-        tarea.otrosCostos.forEach((o, i) => {
-            o.cantidad = parseFloat(form[`otros-${i}`].value) || 0;
-        });
+        for (let i = 0; i < tarea.otrosCostos.length; i++) {
+            const val = parseInt(form[`otros-${i}`].value);
+            if (isNaN(val) || val <= 0) {
+                alert('La cantidad real de otros costos debe ser un entero positivo mayor a 0.');
+                return;
+            }
+            tarea.otrosCostos[i].cantidad = val;
+        }
         tarea.estado = 'Terminada';
         modal.classList.add('hidden');
         renderTareas();
