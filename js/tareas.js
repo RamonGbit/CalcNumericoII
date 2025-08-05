@@ -38,9 +38,7 @@ export function renderTareas() {
             <div class="flex gap-2">
                 <button class="bg-red-500 text-white px-2 py-1 rounded eliminar-tarea-btn" data-idx="${idx}">Eliminar</button>
                 <button class="bg-blue-500 text-white px-2 py-1 rounded edit-tarea-btn" data-idx="${idx}">Editar</button>
-                <select class="border rounded px-2 py-1" onchange="window.updateEstadoTarea(${idx}, this.value)">
-                    ${estadosTarea.map(e => `<option value='${e}' ${e === t.estado ? 'selected' : ''}>${e}</option>`).join('')}
-                </select>
+                <!-- El estado solo se puede modificar desde el dashboard -->
             </div>
         `;
         listaTareas.appendChild(li);

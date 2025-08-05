@@ -191,7 +191,6 @@ function mostrarModalRealTarea(idx) {
         renderDashboard();
     };
 }
-        
+            }
         }
     }
-}
