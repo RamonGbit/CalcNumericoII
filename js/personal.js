@@ -23,7 +23,7 @@ export function renderPersonal() {
         header.className = 'py-2 font-bold text-lg text-red-700';
         header.textContent = tipo;
         listaPersonal.appendChild(header);
-        grupo.forEach(p => {
+        grupo.forEach((p, idx) => {
             const li = document.createElement('li');
             li.className = 'py-3 flex flex-col md:flex-row md:items-center md:justify-between';
             const costoHoraExtra = (p.costoHora * 1.5).toFixed(2);
@@ -31,8 +31,22 @@ export function renderPersonal() {
                 <span class="font-medium">${p.nombre} ${p.apellido}</span>
                 <span class="text-xs bg-purple-100 text-purple-800 px-2 py-1 rounded mt-2 md:mt-0 md:ml-2">Sueldo/hora: $${p.costoHora}</span>
                 <span class="text-xs bg-yellow-100 text-yellow-800 px-2 py-1 rounded mt-2 md:mt-0 md:ml-2">Hora extra (50%): $${costoHoraExtra}</span>
+                <button class="bg-red-500 text-white px-2 py-1 rounded eliminar-personal-btn" data-nombre="${p.nombre}" data-apellido="${p.apellido}" data-tipo="${p.tipo}">Eliminar</button>
             `;
             listaPersonal.appendChild(li);
+        });
+    });
+    // Listener para botón Eliminar en personal
+    listaPersonal.querySelectorAll('.eliminar-personal-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const nombre = this.dataset.nombre;
+            const apellido = this.dataset.apellido;
+            const tipo = this.dataset.tipo;
+            const idx = personal.findIndex(p => p.nombre === nombre && p.apellido === apellido && p.tipo === tipo);
+            if (idx !== -1) {
+                personal.splice(idx, 1);
+                renderPersonal();
+            }
         });
     });
 }

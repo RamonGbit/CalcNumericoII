@@ -11,14 +11,23 @@ export function renderGastos() {
         listaGastos.innerHTML = '<li class="py-3 text-gray-500">No hay gastos registrados.</li>';
         return;
     }
-    otrosCostos.forEach(g => {
+    otrosCostos.forEach((g, idx) => {
         const li = document.createElement('li');
         li.className = 'py-3 flex flex-col md:flex-row md:items-center md:justify-between';
         li.innerHTML = `
             <span class="font-medium">${g.nota}</span>
             <span class="text-xs bg-red-100 text-red-800 px-2 py-1 rounded mt-2 md:mt-0 md:ml-2">$${g.costo}</span>
+            <button class="bg-red-500 text-white px-2 py-1 rounded eliminar-gasto-btn" data-idx="${idx}">Eliminar</button>
         `;
         listaGastos.appendChild(li);
+    });
+    // Listener para botón Eliminar en otros costos
+    listaGastos.querySelectorAll('.eliminar-gasto-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const idx = parseInt(this.dataset.idx);
+            otrosCostos.splice(idx, 1);
+            renderGastos();
+        });
     });
 }
 

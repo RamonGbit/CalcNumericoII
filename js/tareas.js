@@ -36,13 +36,29 @@ export function renderTareas() {
                 <div class="text-xs mt-2">Otros Costos: ${t.otrosCostos.map(o => `${o.nota} ($${o.costo}) x${o.cantidad}`).join(', ')}</div>
             </div>
             <div class="flex gap-2">
-                <button class="bg-blue-500 text-white px-2 py-1 rounded" onclick="window.editTarea(${idx})">Editar</button>
+                <button class="bg-red-500 text-white px-2 py-1 rounded eliminar-tarea-btn" data-idx="${idx}">Eliminar</button>
+                <button class="bg-blue-500 text-white px-2 py-1 rounded edit-tarea-btn" data-idx="${idx}">Editar</button>
                 <select class="border rounded px-2 py-1" onchange="window.updateEstadoTarea(${idx}, this.value)">
                     ${estadosTarea.map(e => `<option value='${e}' ${e === t.estado ? 'selected' : ''}>${e}</option>`).join('')}
                 </select>
             </div>
         `;
         listaTareas.appendChild(li);
+    });
+    // Listener para botón Eliminar en tareas
+    listaTareas.querySelectorAll('.eliminar-tarea-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const idx = parseInt(this.dataset.idx);
+            tareas.splice(idx, 1);
+            renderTareas();
+        });
+    });
+    // Listener para botón Editar en tareas
+    listaTareas.querySelectorAll('.edit-tarea-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const idx = parseInt(this.dataset.idx);
+            mostrarModalEditarTarea(idx);
+        });
     });
 }
 
@@ -59,7 +75,6 @@ export function setupTareaForm() {
         const nombre = document.getElementById('nombreTarea').value.trim();
         const estado = document.getElementById('estadoTarea').value;
         const tiempoTotal = parseFloat(document.getElementById('tiempoTotalTarea').value);
-        const costoEstimado = parseFloat(document.getElementById('costoEstimadoTarea').value);
         // Personal seleccionado (solo los marcados)
         const personalSeleccionado = Array.from(document.querySelectorAll('.personal-row')).filter(row => {
             return row.querySelector('.personal-check').checked;
@@ -84,23 +99,7 @@ export function setupTareaForm() {
             const cantidad = parseFloat(row.querySelector('.cantidad-otros').value) || 0;
             return { ...otrosCostos[idx], cantidad };
         });
-
-        // Calcular costo real de la tarea
-        let costoReal = 0;
-        personalSeleccionado.forEach(p => {
-            costoReal += (p.costoHora || 0) * (p.tiempo || 0);
-        });
-        materialesSeleccionado.forEach(m => {
-            costoReal += (m.costoUnidad || 0) * (m.cantidad || 0);
-        });
-        otrosSeleccionado.forEach(o => {
-            costoReal += (o.costo || 0) * (o.cantidad || 0);
-        });
-        if (!isNaN(costoEstimado) && costoReal > costoEstimado) {
-            alert('¡El costo real de la tarea supera el costo estimado!');
-            return; // No registrar la tarea
-        }
-        tareas.push({ nombre, estado, tiempoTotal, costoEstimado, personal: personalSeleccionado, materiales: materialesSeleccionado, otrosCostos: otrosSeleccionado });
+        tareas.push({ nombre, estado, tiempoTotal, personal: personalSeleccionado, materiales: materialesSeleccionado, otrosCostos: otrosSeleccionado });
         renderTareas();
         tareaForm.reset();
         tareaForm.classList.add('hidden');
@@ -114,14 +113,7 @@ export function fillTareaFormOptions() {
     personal.forEach((p, idx) => {
         const row = document.createElement('div');
         row.className = 'personal-row flex gap-2 mb-2 items-center';
-        row.innerHTML = `
-            <input type="checkbox" class="personal-check" data-idx="${idx}">
-            <span>${p.nombre} ${p.apellido} (${p.tipo})</span>
-            <input type="number" class="tiempo-personal border rounded px-2 py-1" min="0" placeholder="Horas a trabajar" style="display:none;">
-        `;
-        row.querySelector('.personal-check').addEventListener('change', function() {
-            row.querySelector('.tiempo-personal').style.display = this.checked ? '' : 'none';
-        });
+        row.innerHTML = `<input type='checkbox' class='personal-check' data-idx='${idx}' /><span>${p.nombre} ${p.apellido}</span><input type='number' class='tiempo-personal border rounded px-2 py-1' min='0' placeholder='Horas' />`;
         personalContainer.appendChild(row);
     });
     // Materiales (checkbox + input cantidad)
@@ -130,11 +122,7 @@ export function fillTareaFormOptions() {
     materiales.forEach((m, idx) => {
         const row = document.createElement('div');
         row.className = 'material-row flex gap-2 mb-2 items-center';
-        row.innerHTML = `
-            <input type="checkbox" class="material-check" data-idx="${idx}">
-            <span>${m.nombre}</span>
-            <input type="number" class="cantidad-material border rounded px-2 py-1" min="0" placeholder="Cantidad a usar" style="display:none;">
-        `;
+        row.innerHTML = `<input type='checkbox' class='material-check' data-idx='${idx}' /><span>${m.nombre}</span><input type='number' class='cantidad-material border rounded px-2 py-1' min='0' placeholder='Cantidad a usar' style='display:none;' />`;
         row.querySelector('.material-check').addEventListener('change', function() {
             row.querySelector('.cantidad-material').style.display = this.checked ? '' : 'none';
         });
@@ -146,35 +134,125 @@ export function fillTareaFormOptions() {
     otrosCostos.forEach((o, idx) => {
         const row = document.createElement('div');
         row.className = 'otros-row flex gap-2 mb-2 items-center';
-        row.innerHTML = `
-            <input type="checkbox" class="otros-check" data-idx="${idx}">
-            <span>${o.nota} ($${o.costo})</span>
-            <input type="number" class="cantidad-otros border rounded px-2 py-1" min="0" placeholder="Cantidad" style="display:none;">
-        `;
+        row.innerHTML = `<input type='checkbox' class='otros-check' data-idx='${idx}' /><span>${o.nota} ($${o.costo})</span><input type='number' class='cantidad-otros border rounded px-2 py-1' min='0' placeholder='Cantidad' style='display:none;' />`;
         row.querySelector('.otros-check').addEventListener('change', function() {
             row.querySelector('.cantidad-otros').style.display = this.checked ? '' : 'none';
         });
         otrosContainer.appendChild(row);
     });
 }
-
-// Funciones para editar tarea y estado
-window.editTarea = function(idx) {
-    // Implementar edición de tarea (puede abrir el formulario con los datos cargados)
-    // ...
-    alert('Funcionalidad de edición en desarrollo');
-};
-window.updateEstadoTarea = function(idx, estado) {
-    if (estado === 'Terminada') {
-        // Mostrar modal desde dashboard.js
-        if (window.mostrarModalRealTarea) {
-            window.mostrarModalRealTarea(idx);
-        } else {
-            tareas[idx].estado = estado;
-            renderTareas();
-        }
+// Modal de edición de tarea
+function mostrarModalEditarTarea(idx) {
+    const tarea = tareas[idx];
+    // Crear modal si no existe
+    let modal = document.getElementById('modal-editar-tarea');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-editar-tarea';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50';
+        modal.innerHTML = `
+            <div class="bg-white rounded-lg shadow-lg p-8 w-full max-w-xl">
+                <h3 class="text-2xl font-bold mb-4">Editar tarea</h3>
+                <form id="form-editar-tarea">
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">Nombre</label>
+                        <input type="text" name="nombre" class="w-full px-3 py-2 border rounded" required>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">Estado</label>
+                        <select name="estado" class="w-full px-3 py-2 border rounded">
+                            ${estadosTarea.map(e => `<option value='${e}'>${e}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">Costo estimado</label>
+                        <input type="number" name="costoEstimado" class="w-full px-3 py-2 border rounded" min="0">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">Tiempo total (horas)</label>
+                        <input type="number" name="tiempoTotal" class="w-full px-3 py-2 border rounded" min="0">
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">Personal</label>
+                        <div id="editar-personal-container"></div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">Materiales</label>
+                        <div id="editar-materiales-container"></div>
+                    </div>
+                    <div class="mb-4">
+                        <label class="block text-gray-700 mb-2">Otros Costos</label>
+                        <div id="editar-otros-container"></div>
+                    </div>
+                    <div class="flex justify-end gap-2">
+                        <button type="button" id="cancelarEditarTarea" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">Cancelar</button>
+                        <button type="submit" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        document.body.appendChild(modal);
     } else {
-        tareas[idx].estado = estado;
-        renderTareas();
+        modal.classList.remove('hidden');
     }
-};
+    // Precargar datos
+    const form = document.getElementById('form-editar-tarea');
+    form.nombre.value = tarea.nombre;
+    form.estado.value = tarea.estado;
+    form.costoEstimado.value = tarea.costoEstimado || 0;
+    form.tiempoTotal.value = tarea.tiempoTotal || 0;
+    // Personal
+    const personalDiv = document.getElementById('editar-personal-container');
+    personalDiv.innerHTML = '';
+    import('./personal.js').then(({ personal }) => {
+        personal.forEach((p, i) => {
+            const asignado = tarea.personal.find(tp => tp.nombre === p.nombre && tp.apellido === p.apellido);
+            personalDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='personal-${i}' ${asignado ? 'checked' : ''} /><span>${p.nombre} ${p.apellido}</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='personal-horas-${i}' value='${asignado ? asignado.tiempo : ''}' /></div>`;
+        });
+    });
+    // Materiales
+    const materialesDiv = document.getElementById('editar-materiales-container');
+    materialesDiv.innerHTML = '';
+    import('./materiales.js').then(({ materiales }) => {
+        materiales.forEach((m, i) => {
+            const asignado = tarea.materiales.find(tm => tm.nombre === m.nombre);
+            materialesDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='material-${i}' ${asignado ? 'checked' : ''} /><span>${m.nombre}</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='material-cantidad-${i}' value='${asignado ? asignado.cantidad : ''}' /></div>`;
+        });
+    });
+    // Otros Costos
+    const otrosDiv = document.getElementById('editar-otros-container');
+    otrosDiv.innerHTML = '';
+    import('./otroscostos.js').then(({ otrosCostos }) => {
+        otrosCostos.forEach((o, i) => {
+            const asignado = tarea.otrosCostos.find(to => to.nota === o.nota);
+            otrosDiv.innerHTML += `<div class='mb-2 flex gap-2 items-center'><input type='checkbox' name='otros-${i}' ${asignado ? 'checked' : ''} /><span>${o.nota}</span><input type='number' min='0' step='0.1' class='border rounded px-2 py-1' name='otros-cantidad-${i}' value='${asignado ? asignado.cantidad : ''}' /></div>`;
+        });
+    });
+    // Cancelar
+    document.getElementById('cancelarEditarTarea').onclick = () => {
+        modal.classList.add('hidden');
+    };
+    // Guardar
+    form.onsubmit = function(e) {
+        e.preventDefault();
+        tarea.nombre = form.nombre.value;
+        tarea.estado = form.estado.value;
+        tarea.costoEstimado = parseFloat(form.costoEstimado.value) || 0;
+        tarea.tiempoTotal = parseFloat(form.tiempoTotal.value) || 0;
+        // Personal
+        import('./personal.js').then(({ personal }) => {
+            tarea.personal = personal.filter((p, i) => form[`personal-${i}`].checked).map((p, i) => ({ ...p, tiempo: parseFloat(form[`personal-horas-${i}`].value) || 0 }));
+            // Materiales
+            import('./materiales.js').then(({ materiales }) => {
+                tarea.materiales = materiales.filter((m, i) => form[`material-${i}`].checked).map((m, i) => ({ ...m, cantidad: parseFloat(form[`material-cantidad-${i}`].value) || 0 }));
+                // Otros Costos
+                import('./otroscostos.js').then(({ otrosCostos }) => {
+                    tarea.otrosCostos = otrosCostos.filter((o, i) => form[`otros-${i}`].checked).map((o, i) => ({ ...o, cantidad: parseFloat(form[`otros-cantidad-${i}`].value) || 0 }));
+                    modal.classList.add('hidden');
+                    renderTareas();
+                });
+            });
+        });
+    };
+}
+     
