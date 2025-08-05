@@ -30,8 +30,10 @@ export function renderMateriales() {
     listaMateriales.querySelectorAll('.eliminar-material-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const idx = parseInt(this.dataset.idx);
-            materiales.splice(idx, 1);
-            renderMateriales();
+            if (confirm('¿Estás seguro de que deseas eliminar este material?')) {
+                materiales.splice(idx, 1);
+                renderMateriales();
+            }
         });
     });
 }
@@ -48,11 +50,27 @@ export function setupMaterialForm() {
         const nombre = document.getElementById('nombreMaterial').value.trim();
         const reserva = parseInt(document.getElementById('reservaMaterial').value);
         const costoUnidad = parseFloat(document.getElementById('costoUnidadMaterial')?.value) || 0;
-        if (nombre && !isNaN(reserva)) {
-            materiales.push({ nombre, reserva, costoUnidad });
-            renderMateriales();
-            materialForm.reset();
-            materialForm.classList.add('hidden');
+        if (!nombre) return;
+        if (nombre.length < 3 || nombre.length > 50) {
+            alert('El nombre del material debe tener entre 3 y 50 caracteres.');
+            return;
         }
+        // Validar duplicados (case-insensitive)
+        if (materiales.some(m => m.nombre.toLowerCase() === nombre.toLowerCase())) {
+            alert('Ya existe un material con ese nombre.');
+            return;
+        }
+        if (isNaN(reserva) || reserva <= 0) {
+            alert('La cantidad en reserva debe ser mayor a 0.');
+            return;
+        }
+        if (isNaN(costoUnidad) || costoUnidad <= 0) {
+            alert('El costo por unidad debe ser mayor a 0.');
+            return;
+        }
+        materiales.push({ nombre, reserva, costoUnidad });
+        renderMateriales();
+        materialForm.reset();
+        materialForm.classList.add('hidden');
     });
 }

@@ -42,10 +42,12 @@ export function renderPersonal() {
             const nombre = this.dataset.nombre;
             const apellido = this.dataset.apellido;
             const tipo = this.dataset.tipo;
-            const idx = personal.findIndex(p => p.nombre === nombre && p.apellido === apellido && p.tipo === tipo);
-            if (idx !== -1) {
-                personal.splice(idx, 1);
-                renderPersonal();
+            if (confirm('¿Estás seguro de que deseas eliminar a este personal?')) {
+                const idx = personal.findIndex(p => p.nombre === nombre && p.apellido === apellido && p.tipo === tipo);
+                if (idx !== -1) {
+                    personal.splice(idx, 1);
+                    renderPersonal();
+                }
             }
         });
     });
@@ -64,11 +66,26 @@ export function setupPersonalForm() {
         const apellido = document.getElementById('apellidoPersonal').value.trim();
         const tipo = document.getElementById('tipoPersonal').value.trim();
         const costoHora = parseFloat(document.getElementById('costoHoraPersonal').value);
-        if (nombre && apellido && tipo && !isNaN(costoHora)) {
-            personal.push({ nombre, apellido, tipo, costoHora });
-            renderPersonal();
-            personalForm.reset();
-            personalForm.classList.add('hidden');
+        if (!nombre || !apellido || !tipo || isNaN(costoHora)) return;
+        if (nombre.length < 2 || nombre.length > 30) {
+            alert('El nombre debe tener entre 2 y 30 caracteres.');
+            return;
         }
+        if (apellido.length < 2 || apellido.length > 30) {
+            alert('El apellido debe tener entre 2 y 30 caracteres.');
+            return;
+        }
+        if (tipo.length < 2 || tipo.length > 30) {
+            alert('El tipo de personal debe tener entre 2 y 30 caracteres.');
+            return;
+        }
+        if (costoHora <= 0) {
+            alert('El sueldo por hora debe ser mayor a 0.');
+            return;
+        }
+        personal.push({ nombre, apellido, tipo, costoHora });
+        renderPersonal();
+        personalForm.reset();
+        personalForm.classList.add('hidden');
     });
 }

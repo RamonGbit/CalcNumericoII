@@ -47,8 +47,10 @@ export function renderTareas() {
     listaTareas.querySelectorAll('.eliminar-tarea-btn').forEach(btn => {
         btn.addEventListener('click', function() {
             const idx = parseInt(this.dataset.idx);
-            tareas.splice(idx, 1);
-            renderTareas();
+            if (confirm('¿Estás seguro de que deseas eliminar esta tarea?')) {
+                tareas.splice(idx, 1);
+                renderTareas();
+            }
         });
     });
     // Listener para botón Editar en tareas
@@ -73,6 +75,16 @@ export function setupTareaForm() {
         const nombre = document.getElementById('nombreTarea').value.trim();
         const estado = document.getElementById('estadoTarea').value;
         const tiempoTotal = parseFloat(document.getElementById('tiempoTotalTarea').value);
+        // Validar nombre de tarea
+        if (!nombre) return;
+        if (nombre.length < 3 || nombre.length > 50) {
+            alert('El nombre de la tarea debe tener entre 3 y 50 caracteres.');
+            return;
+        }
+        if (tareas.some(t => t.nombre.toLowerCase() === nombre.toLowerCase())) {
+            alert('Ya existe una tarea con ese nombre.');
+            return;
+        }
         // Personal seleccionado (solo los marcados)
         const personalSeleccionado = Array.from(document.querySelectorAll('.personal-row')).filter(row => {
             return row.querySelector('.personal-check').checked;
@@ -81,6 +93,18 @@ export function setupTareaForm() {
             const tiempo = parseFloat(row.querySelector('.tiempo-personal').value) || 0;
             return { ...personal[idx], tiempo };
         });
+        if (personalSeleccionado.length === 0) {
+            alert('Debes seleccionar al menos una persona para la tarea.');
+            return;
+        }
+        if (personalSeleccionado.some(p => p.tiempo <= 0)) {
+            alert('No puedes asignar personal con 0 horas de trabajo a la tarea.');
+            return;
+        }
+        if (personalSeleccionado.some(p => p.tiempo > 8)) {
+            alert('No puedes asignar más de 8 horas a una persona en una sola tarea.');
+            return;
+        }
         // Materiales seleccionado (solo los marcados)
         const materialesSeleccionado = Array.from(document.querySelectorAll('.material-row')).filter(row => {
             return row.querySelector('.material-check').checked;
@@ -89,6 +113,10 @@ export function setupTareaForm() {
             const cantidad = parseFloat(row.querySelector('.cantidad-material').value) || 0;
             return { ...materiales[idx], cantidad };
         });
+        if (materialesSeleccionado.some(m => m.cantidad <= 0)) {
+            alert('No puedes asignar materiales con 0 unidades a la tarea.');
+            return;
+        }
         // Otros costos seleccionado (solo los marcados, con cantidad)
         const otrosSeleccionado = Array.from(document.querySelectorAll('.otros-row')).filter(row => {
             return row.querySelector('.otros-check').checked;
